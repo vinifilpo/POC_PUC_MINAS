@@ -1,0 +1,170 @@
+<core:FragmentDefinition
+    height="100%"
+    xmlns:layout="sap.ui.layout"
+    xmlns:form="sap.ui.layout.form"
+    xmlns:core="sap.ui.core"
+    xmlns="sap.m">
+    <Page id="wizardBranchingReviewPage" showHeader="false">
+      <content>
+        <form:SimpleForm
+            title="1. Produtos"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <List mode="None"
+              items="{/d/results}"
+              enableBusyIndicator="true">
+            <StandardListItem
+                title="{Produto}"
+                type="Active"
+                description="{Descricao}"
+                icon="{imagem1}"
+                info="Quantidade {quantidade} - R$ {total}"
+                iconDensityAware="false"
+                infoState="Success"
+                iconInset="false" />
+          </List>
+          <ObjectHeader
+              title="Total(R$)"
+              number="{parts:[{path:'/ProductsTotalPriceDelivery'},{path:'CurrencyCode'}],
+                            type: 'sap.ui.model.type.Currency',
+                            formatOptions: {showMeasure: false}}"
+              >
+            <attributes>
+
+               <ObjectAttribute
+                  text="Valor total Compras: {/ProductsTotalPriceCheck}" />
+               <ObjectAttribute
+                  text="Valor total frete:     {/ProductsDelivery}" />
+              <ObjectAttribute
+                  press="_navBackToList"
+                  active="true"
+                  text="Editar" />
+            </attributes>
+
+          </ObjectHeader>
+
+        </form:SimpleForm>
+
+        <form:SimpleForm
+            title="2. Forma de pagamento"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <form:content>
+            <Label text="Escolha uma forma de pagamento"/>
+            <Text text="{/selectedPayment}"/>
+            <Link press="_navBackToPaymentType" text="Editar" />
+          </form:content>
+        </form:SimpleForm>
+
+        <form:SimpleForm
+            visible="{= ${/selectedPayment}==='Cartão de Crédito' ? true : false}"
+            title="3. Cart�o de cr�dito"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <form:content>
+            <Label text="Nome"/>
+            <Text text="{/CreditCard/Name}"/>
+            <Label text="Número do cartão"/>
+            <Text text="XXXXXXXXXXXX{/CardNumberCript}"/>
+
+            <Label text="Data de vencimento"/>
+            <Text text="{/CreditCard/Expire}"/>
+            <Label text="Parcelas"/>
+            <Text text="{/installmentsText}"/>
+            <Link press="_navBackToCreditCard" text="Editar" />
+          </form:content>
+        </form:SimpleForm>
+
+        <form:SimpleForm
+            visible="{= ${/selectedPayment}==='Boleto Banc�rio' ? true : false}"
+            title="3. Boleto Banc�rio"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <form:content>
+              <layout:Grid
+                  defaultSpan="L6 M6 S10"
+                  hSpacing="2">
+                        <Label text="Benefici�rio" design="bold" />
+                        <Label text="POC e-Commerce LTDA" />
+                        <Label text="Banco" design="bold" />
+                        <Label text="SANTANDER DO BRASIL" />
+                        <Label text="Número do Boleto" design="bold" />
+                        <Label text="03399.71201 22517.738831 54160.001514 8 77550000100000" />
+                        <Label text="Vencimento" design="bold" />
+                        <Label text="31/12/2018" />
+                        <Label text="Valor" design="bold" />
+                        <Label text="R$ 3.215,78"  />
+              </layout:Grid>
+          </form:content>
+        </form:SimpleForm>
+
+        <form:SimpleForm
+            visible="{= ${/selectedPayment}==='Cash on Delivery' ? true : false}"
+            title="3. Cash on delivery"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <form:content>
+            <Label text="First Name"/>
+            <Text text="{/CashOnDelivery/FirstName}"/>
+            <Label text="Last Name"/>
+            <Text text="{/CashOnDelivery/LastName}"/>
+            <Label text="Phone number"/>
+            <Text text="{/CashOnDelivery/Phone Number}"/>
+            <Label text="Email address"/>
+            <Text text="{/CashOnDelivery/Email}"/>
+            <Link press="_navBackToCashOnDelivery" text="Editar" />
+          </form:content>
+        </form:SimpleForm>
+
+        <form:SimpleForm
+            title="4. Endere�o de cobran�a"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <form:content>
+            <Label text="Rua"/>
+            <Text text="{/BillingAddress/Address}"/>
+            <Label text="Número"/>
+            <Text text="{/BillingAddress/Number}"/>
+            <Label text="Bairro"/>
+            <Text text="{/BillingAddress/District}"/>
+            <Label text="Cidade"/>
+            <Text text="{/BillingAddress/City}"/>
+            <Label text="Estado"/>
+            <Text text="{/BillingAddress/Region}"/>
+            <Label text="CEP"/>
+            <Text text="{/BillingAddress/ZipCode}"/>
+            <Label text="Ponto de referencia/Observa��es"/>
+            <Text text="{/BillingAddress/Note}"/>
+            <Link press="_navBackToBillingAddress" text="Editar" />
+          </form:content>
+        </form:SimpleForm>
+
+        <form:SimpleForm
+            title="5. Tipo de entrega"
+            minWidth="1024"
+            editable="false"
+            layout="ResponsiveGridLayout">
+          <form:content>
+            <Label text="Escolha o tipo de entrega"/>
+            <Text text="{/selectedDeliveryMethod}"/>
+            <Link press="_navBackToDeliveryType" text="Editar" />
+          </form:content>
+        </form:SimpleForm>
+
+      </content>
+      <footer>
+        <Bar>
+          <contentRight>
+            <Button text="Confirmar" press="handleWizardSubmit"/>
+            <Button text="Cancelar" press="handleWizardCancel"/>
+          </contentRight>
+        </Bar>
+      </footer>
+    </Page>
+</core:FragmentDefinition>

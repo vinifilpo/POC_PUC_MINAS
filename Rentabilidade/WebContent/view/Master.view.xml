@@ -1,0 +1,19 @@
+<mvc:View xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:viz="sap.viz.ui5.controls"
+xmlns:tnt="sap.tnt" controllerName="opensap.relatorio.controller.Master">
+  <App id="app">
+    <Page >
+      <content>
+   <IconTabBar id="idTopLevelIconTabBar" selectedKey="db" class="sapUiResponsiveContentPadding">
+   <items>
+   <IconTabFilter id="start" text="Lucro por Região">
+      <viz:VizFrame xmlns="sap.viz" id="idcolumn" />
+   </IconTabFilter>
+   <IconTabFilter id="End" text="Lucro por categoria">
+      <viz:VizFrame xmlns="sap.viz" id="idcolumn2" />
+   </IconTabFilter>
+   </items>
+   </IconTabBar>
+      </content>
+    </Page>
+  </App>
+</mvc:View>

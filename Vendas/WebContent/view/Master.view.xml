@@ -1,0 +1,32 @@
+<mvc:View xmlns:mvc="sap.ui.mvc" xmlns:core="sap.ui.core" xmlns="sap.m" xmlns:smartFilterBar="sap.ui.comp.smartfilterbar"
+  xmlns:smartTable="sap.ui.comp.smarttable" xmlns:html="http://www.w3.org/1999/xhtml" xmlns:tnt="sap.tnt"
+  xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1" controllerName="opensap.relatorio.controller.Master"
+  height="100%">
+  <App id="app">
+    <Page >
+      <content>
+
+          <smartFilterBar:SmartFilterBar id="smartFilterBar" entitySet="RelatorioVendasSet" persistencyKey="SmartFilter_Explored"
+            basicSearchFieldName="IdPedido">
+    <smartFilterBar:controlConfiguration>
+      <smartFilterBar:ControlConfiguration key="IdPedido">
+        <smartFilterBar:defaultFilterValues>
+          <smartFilterBar:SelectOption low="1"></smartFilterBar:SelectOption>
+        </smartFilterBar:defaultFilterValues>
+      </smartFilterBar:ControlConfiguration>
+      <smartFilterBar:ControlConfiguration key="Fabricante">
+        <smartFilterBar:defaultFilterValues>
+          <smartFilterBar:SelectOption low=""></smartFilterBar:SelectOption>
+        </smartFilterBar:defaultFilterValues>
+      </smartFilterBar:ControlConfiguration>
+    </smartFilterBar:controlConfiguration>
+  </smartFilterBar:SmartFilterBar>
+        <smartTable:SmartTable entitySet="RelatorioVendasSet" enableAutoBinding="true"
+         smartFilterId="smartFilterBar" tableType="Table" useExportToExcel="true"
+          initiallyVisibleFields="IdPedido,Produto,Fabricante,Categoria" useTablePersonalisation="true"
+          persistencyKey="SmartTableAnalytical_Explored" app:useSmartField="true" class="sapUiResponsiveContentPadding"/>
+
+      </content>
+    </Page>
+  </App>
+</mvc:View>

@@ -1,0 +1,71 @@
+<mvc:View
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core"
+  controllerName="opensap.relatorio.controller.Slave"
+  xmlns:l="sap.ui.layout"
+  xmlns:tnt="sap.tnt">
+  
+  <App id="app">
+  <Page
+  showNavButton="true"
+  navButtonPress="onBack">
+      <customHeader>
+        <Bar>
+          <contentRight>
+            <Button icon="sap-icon://customer" press="onAvatarPress"
+              tooltip="" />
+            <Button icon="sap-icon://cart" press="onCartPress" tooltip="" />
+          </contentRight>
+        </Bar>
+      </customHeader>
+  <content>
+  <ObjectHeader title="{Produto}"
+    number="{
+      parts:[{path:'Preco'},{path:'CurrencyCode'}],
+      type: 'sap.ui.model.type.Currency',
+      formatOptions: {showMeasure: false}
+    }"
+    numberUnit="{CurrencyCode}">
+    <attributes>
+      <ObjectAttribute text="{Descricao}" />
+      <ObjectAttribute text="{Detalhe}" />
+      <ObjectAttribute text="Fabricante: {Fabricante}" />
+      <ObjectAttribute text="Garantia: {Garantia}" />
+    </attributes>
+    <statuses>
+      <ObjectStatus
+        class="sapUiSmallMarginBottom"
+        title=""
+        text="Adicionar ao carrinho"
+        active="true"
+        state="Success"
+        press="onAddToCartPressed"
+        icon="sap-icon://cart-4" />
+        </statuses>
+  </ObjectHeader>
+  <HBox alignItems="Start" renderType="Div">
+    <Carousel>
+      <pages>
+        <Image
+          src="{imagem1}"
+          height="300px" />
+        <Image
+          src="{imagem2}"
+          height="300px" />
+      </pages>
+    </Carousel>
+  <l:VerticalLayout
+    class="sapUiContentPadding">
+      <Text text="Avaliação:"/>
+  <RatingIndicator id="ratingIndicator"
+              value="{path: 'Avaliacao', type: 'sap.ui.model.odata.type.Decimal', formatOptions: { parseAsString: true, maxIntegerDigits: 2, maxFractionDigits: 2} }"
+              iconSize="1rem" class="sapUiTinyMarginTop"/>
+              </l:VerticalLayout>
+  </HBox>
+  
+  
+  </content>
+  </Page>
+  </App>
+</mvc:View>

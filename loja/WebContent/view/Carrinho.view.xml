@@ -1,0 +1,283 @@
+<mvc:View xmlns:mvc="sap.ui.mvc" xmlns:core="sap.ui.core"
+  xmlns="sap.m" xmlns:smartFilterBar="sap.ui.comp.smartfilterbar"
+  xmlns:smartTable="sap.ui.comp.smarttable" xmlns:html="http://www.w3.org/1999/xhtml"
+  xmlns:tnt="sap.tnt"
+  xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"
+  controllerName="opensap.relatorio.controller.Carrinho" xmlns:form="sap.ui.layout.form"
+  xmlns:layout="sap.ui.layout" height="100%">
+  <App id="app">
+    <Page title="Carrinho de Compras" showNavButton="true">
+      <customHeader>
+        <Bar>
+          <contentRight>
+            <Button icon="sap-icon://customer" press="onAvatarPress"
+              tooltip="" />
+          </contentRight>
+        </Bar>
+      </customHeader>
+      <content>
+        <NavContainer id="wizardNavContainer">
+          <pages>
+            <Page id="wizardContentPage" showHeader="false">
+              <content>
+                <Wizard id="ShoppingCartWizard" complete="completedHandler"
+                  enableBranching="true">
+                  <WizardStep id="ContentsStep" nextStep="PaymentTypeStep"
+                    title="Itens no carrinho" icon="sap-icon://cart">
+                    <ObjectHeader title="Total(R$)"
+
+                    number="{parts:[{path:'/ProductsTotalPrice'},{path:'CurrencyCode'}],
+                            type: 'sap.ui.model.type.Currency',
+                            formatOptions: {showMeasure: false}}"
+                      >
+                      <attributes>
+                        <ObjectAttribute
+                          text="Esta é a lista de itens no seu carrinho de compras" />
+                      </attributes>
+                    </ObjectHeader>
+      <Table id="invoiceList" mode="Delete" delete="handleDelete" headerText="Products"
+        items="{
+      path:'/d/results',
+      sorter: {
+        path: 'SupplierName',
+        descending: false
+      }
+    }">
+        <columns>
+          <Column>
+            <header>
+              <Text text="" />
+            </header>
+          </Column>
+          <Column>
+            <header>
+              <Text text="Produto" />
+            </header>
+          </Column>
+          <Column minScreenWidth="Tablet" demandPopin="true" hAlign="End">
+            <header>
+              <Text text="Quantidade" />
+            </header>
+          </Column>
+
+          <Column hAlign="End">
+            <header>
+              <Text text="Pre�o(R$)" />
+            </header>
+          </Column>
+          <Column hAlign="End">
+            <header>
+              <Text text="Valor total(R$)" />
+            </header>
+          </Column>
+
+        </columns>
+        <ColumnListItem id="columnListItem" type="Navigation"
+          press="onPress">
+          <Image id="imageImage" src="{imagem1}" densityAware="false"
+            width="3rem" height="3rem" visible="true" backgroundPosition="center center"
+            backgroundSize="contain" mode="Background" alt="Imagem"
+            decorative="false" class="sapUiSmallMarginTopBottom" />
+          <ObjectIdentifier title="{Produto}" text="{Descricao}" />
+
+                    <Input id="quantityInput" ariaLabelledBy="quantityLabel" change="onQuantityChanged" maxLength="3" textAlign="End" type="Number"
+                      value="{path: 'quantidade', type: 'sap.ui.model.type.Integer'}" valueStateText="Valor inv�lido"/>
+          <ObjectNumber
+            number="{
+            parts:[{path:'Preco'},{path:'CurrencyCode'}],
+            type: 'sap.ui.model.type.Currency',
+            formatOptions: {showMeasure: false}
+          }"
+            unit="{CurrencyCode}" />
+
+          <ObjectNumber
+            number="{
+            parts:[{path:'total'},{path:'CurrencyCode'}],
+            type: 'sap.ui.model.type.Currency',
+            formatOptions: {showMeasure: false}
+          }"
+            unit="{CurrencyCode}" />
+        </ColumnListItem>
+      </Table>
+
+              <form:SimpleForm editable="true" >
+                <Label text="C.E.P." required="true" />
+                <Input value="{/BillingAddress/ZipCode}"
+                  valueLiveUpdate="true" />
+            <Button
+            text="Calcular frete"
+            icon="sap-icon://shipping-status"
+            press="onCalculateDelivery"
+            tooltip=""/>
+                <Label text="{/typeStandard}" />
+                <Text text="{/standardDeliveryPrice}" />
+                <Label text="{/typeExpress}" />
+                <Text text="{/expressDeliveryPrice}" />
+                </form:SimpleForm>
+
+
+                  </WizardStep>
+                  <WizardStep id="PaymentTypeStep" title="Forma de pagamento"
+                    subsequentSteps="CreditCardStep, BankAccountStep, CashOnDeliveryStep"
+                    complete="goToPaymentStep" icon="sap-icon://money-bills">
+                    <Text class="sapUiSmallMarginBottom"
+                      text="Selecione uma das formas de pagamento disponíveis: Cartão de crédito com bandeira Visa ou Master e Boleto bancário" />
+
+                    <HBox alignItems="Center" justifyContent="Center" width="100%">
+                      <SegmentedButton select="setPaymentMethod"
+                        id="paymentMethodSelection" selectedKey="{/selectedPayment}">
+                        <items>
+                          <SegmentedButtonItem key="Cart�o de Cr�dito"
+                            icon="sap-icon://credit-card" text="Cart�o de cr�dito" />
+                          <SegmentedButtonItem key="Boleto Banc�rio"
+                            icon="sap-icon://bar-code" text="Boleto" />
+
+                        </items>
+                      </SegmentedButton>
+                    </HBox>
+                  </WizardStep>
+                  <WizardStep id="CreditCardStep" title="Informa��es do cart�o de cr�dito"
+                    nextStep="BillingStep" activate="checkCreditCardStep" icon="sap-icon://credit-card">
+                    <MessageStrip text="Preencher dados de cartão de crédito" />
+                    <form:SimpleForm editable="true">
+                      <Label text="Name" required="true" />
+                      <Input value="{/CreditCard/Name}" liveChange="checkCreditCardStep"
+                        valueLiveUpdate="true" />
+                      <Label text="Número do cartão" />
+                      <Input value="{/CardNumber}" />
+                      <Label text="Código de sergurança" />
+                      <Input value="{/CreditCard/SecurityCode}" />
+                      <Label text="Data de validade" />
+                      <DatePicker value="{/CreditCard/Expire}" />
+                      <Label text="Parcelas" />
+            <ComboBox
+
+              selectionChange="onSelectedInstallments">
+                    <items>
+                        <core:ListItem text="A Vista" key="1V"  />
+                        <core:ListItem text="2 Vezes Sem Juros" key="2VSJ"  />
+                        <core:ListItem text="3 Vezes Sem Juros" key="2VSJ" />
+                    </items>
+
+            </ComboBox>
+
+                    </form:SimpleForm>
+                  </WizardStep>
+                  <WizardStep id="BankAccountStep" title="Boleto Banc�rio"
+                    nextStep="BillingStep" icon="sap-icon://bar-code">
+                    <MessageStrip text="Ser� enviado boleto para e-mail cadastrado" />
+                    <Panel>
+                      <headerToolbar>
+                        <Toolbar height="0rem">
+                          <Title text="" />
+                        </Toolbar>
+                      </headerToolbar>
+                      <layout:Grid defaultSpan="L6 M6 S10" hSpacing="2">
+                        <Label text="Beneficiário" design="bold" />
+                        <Label text="POC e-Commerce LTDA" />
+                        <Label text="Banco" design="bold" />
+                        <Label text="SANTANDER DO BRASIL" />
+                        <Label text="Vencimento" design="bold" />
+                        <Label text="31/12/2018" />
+                      </layout:Grid>
+                    </Panel>
+                  </WizardStep>
+                  <WizardStep id="CashOnDeliveryStep" title="Cash on delivery info"
+                    nextStep="BillingStep" activate="checkCashOnDeliveryStep"
+                    icon="sap-icon://money-bills">
+                    <MessageStrip text="Preencher ao menos 3 caracteres no campo nome" />
+                    <form:SimpleForm editable="true">
+                      <Label text="First Name" required="true" />
+                      <Input value="{/CashOnDelivery/FirstName}" liveChange="checkCashOnDeliveryStep"
+                        valueLiveUpdate="true" />
+                      <Label text="Last Name" />
+                      <Input value="{/CashOnDelivery/LastName}" />
+                      <Label text="Phone Number" />
+                      <Input value="{/CashOnDelivery/Phone Number}" />
+                      <Label text="Email address" />
+                      <Input value="{/CashOnDelivery/Email}" />
+                    </form:SimpleForm>
+                  </WizardStep>
+                  <WizardStep id="BillingStep" title="Endere�o de entrega"
+                    subsequentSteps="DeliveryAddressStep, DeliveryTypeStep"
+                    activate="checkBillingStep" complete="billingAddressComplete"
+                    icon="sap-icon://addresses">
+                    <MessageStrip
+                      text="Preencher dados de endere�o" />
+                    <form:SimpleForm editable="true">
+                      <Label text="Alterar endere�o de cobran�a" />
+                      <CheckBox selected="{/differentDeliveryAddress}"
+                        select="setDifferentDeliveryAddress" />
+                      <Label text="Rua" required="true" />
+                      <Input value="{/BillingAddress/Address}" liveChange="checkBillingStep"
+                        valueLiveUpdate="true" />
+                      <Label text="Número" required="true" />
+                      <Input value="{/BillingAddress/Number}" liveChange="checkBillingStep"
+                        valueLiveUpdate="true" />
+
+                      <Label text="Bairro" required="true" />
+                      <Input value="{/BillingAddress/District}" liveChange="checkBillingStep"
+                        valueLiveUpdate="true" />
+
+                      <Label text="Cidade" required="true" />
+                      <Input value="{/BillingAddress/City}" liveChange="checkBillingStep"
+                        valueLiveUpdate="true" />
+
+                      <Label text="Estado" required="true" />
+                      <Input value="{/BillingAddress/Region}" liveChange="checkBillingStep"
+                        valueLiveUpdate="true" />
+
+                      <Label text="C.E.P." required="true" />
+                      <Input value="{/BillingAddress/ZipCode}" liveChange="checkBillingStep"
+                        valueLiveUpdate="true" />
+
+                      <Label text="Ponto de referencia/observa��es" required="false" />
+                      <TextArea rows="8" value="{/BillingAddress/Note}" />
+                    </form:SimpleForm>
+                  </WizardStep>
+                  <WizardStep id="DeliveryAddressStep" title="Endere�o de cobran�a"
+                    nextStep="DeliveryTypeStep" icon="sap-icon://sales-quote">
+                    <form:SimpleForm editable="true">
+                      <Label text="Rua" />
+                      <Input />
+                      <Label text="Cidade" />
+                      <Input />
+                      <Label text="C.E.P." />
+                      <Input />
+                      <Label text="Pa�s" />
+                      <Input />
+                      <Label text="Ponto de referencia/observa��es" />
+                      <TextArea rows="8" />
+                    </form:SimpleForm>
+                  </WizardStep>
+                  <WizardStep id="DeliveryTypeStep" title="Tipo de entrega"
+                    icon="sap-icon://insurance-car">
+                    <Text class="sapUiSmallMarginBottom"
+                      text="Selecione {/typeStandard} por {/standardDeliveryPrice} ou {/typeExpress} por {/expressDeliveryPrice}" />
+
+                    <HBox alignItems="Center" justifyContent="Center" width="100%">
+                      <SegmentedButton selectedKey="{/selectedDeliveryMethod}">
+                        <items>
+                          <SegmentedButtonItem key="Entrega Normal"
+                            text="Normal" />
+                          <SegmentedButtonItem key="Entrega Rápida"
+                            text="Rápida" />
+                        </items>
+                      </SegmentedButton>
+                    </HBox>
+                  </WizardStep>
+                </Wizard>
+              </content>
+              <footer>
+                <OverflowToolbar>
+                  <ToolbarSpacer />
+                  <Button text="Cancelar" press="handleWizardCancel" />
+                </OverflowToolbar>
+              </footer>
+            </Page>
+          </pages>
+        </NavContainer>
+      </content>
+    </Page>
+  </App>
+</mvc:View>

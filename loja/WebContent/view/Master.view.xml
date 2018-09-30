@@ -1,0 +1,128 @@
+<mvc:View displayBlock="true" xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m" xmlns:core="sap.ui.core" controllerName="opensap.relatorio.controller.Master"
+  xmlns:l="sap.ui.layout" xmlns:f="sap.ui.layout.form">
+  <App id="app">
+    <Page title="Login">
+      <customHeader>
+        <Bar>
+
+          <contentRight>
+            <Button icon="sap-icon://customer" press="onAvatarPress"
+              tooltip="" />
+            <Button icon="sap-icon://cart" press="onCartPress" tooltip="" />
+          </contentRight>
+        </Bar>
+      </customHeader>
+  <HBox alignItems="Center" renderType="Div">
+    <Carousel id="Carousel" loop="true">
+      <pages>
+        <VBox renderType="Bare">
+        <Image
+          src="https://image.ibb.co/mtfRKz/POC_PUC.jpg"
+          height="200px"
+          width="100%"/>
+        </VBox>
+        <VBox renderType="Bare">
+        <Image
+          src="https://image.ibb.co/iJoJXK/propaganda.jpg"
+          height="200px"
+          width="100%"/>
+        </VBox>
+      </pages>
+    </Carousel>
+
+  </HBox>
+
+      <Table id="invoiceList" headerText="Products"
+        items="{
+      path:'/d/results',
+      sorter: {
+        path: 'SupplierName',
+        descending: false
+      }
+    }">
+        <headerToolbar>
+
+
+          <Toolbar>
+            <Title />
+
+            <ToolbarSpacer />
+            <Label text="Categoria" design="Bold" class="comboLabel" />
+            <ComboBox
+
+              selectionChange="onChange">
+                    <items>
+                        <core:ListItem text="" key=""  />
+                        <core:ListItem text="Informatica" key="INFORMATICA"  />
+                        <core:ListItem text="Telefonia" key="TELEFONIA" />
+                        <core:ListItem text="Games" key="GAMES" />
+                        <core:ListItem text="TV e Audio" key="TV E AUDIO" />
+
+                    </items>
+
+            </ComboBox>
+
+            <SearchField width="30%" search="onFilterInvoices" />
+
+          </Toolbar>
+
+
+        </headerToolbar>
+        <columns>
+          <Column>
+            <header>
+              <Text text="" />
+            </header>
+          </Column>
+          <Column>
+            <header>
+              <Text text="Produto" />
+            </header>
+          </Column>
+          <Column minScreenWidth="Tablet" demandPopin="true" hAlign="End">
+            <header>
+              <Text text="Avaliação" />
+            </header>
+          </Column>
+
+          <Column hAlign="End">
+            <header>
+              <Text text="Pre�o(R$)" />
+            </header>
+          </Column>
+          <Column id="buttonColumn" width="15%" minScreenWidth="Tablet"
+            demandPopin="true" popinDisplay="WithoutHeader" hAlign="Right"
+            class="sapMTableContentMargin">
+            <header>
+              <Label id="addToCartLabel" text="Adicionar ao Carrinho" />
+            </header>
+          </Column>
+
+        </columns>
+        <ColumnListItem id="columnListItem" type="Navigation"
+          press="onPress">
+
+          <Image id="imageImage" src="{imagem1}" densityAware="false"
+            width="3rem" height="3rem" visible="true" backgroundPosition="center center"
+            backgroundSize="contain" mode="Background" alt="Imagem"
+            decorative="false" class="sapUiSmallMarginTopBottom" />
+          <ObjectIdentifier title="{Produto}" text="{Descricao}" />
+
+      <RatingIndicator id="ratingIndicator"
+              value="{path: 'Avaliacao', type: 'sap.ui.model.odata.type.Decimal', formatOptions: { parseAsString: true, maxIntegerDigits: 2, maxFractionDigits: 2} }"
+              iconSize="1rem" class="sapUiTinyMarginTop"/>
+          <ObjectNumber
+            number="{
+            parts:[{path:'Preco'},{path:'CurrencyCode'}],
+            type: 'sap.ui.model.type.Currency',
+            formatOptions: {showMeasure: false}
+          }"
+            unit="{CurrencyCode}" />
+          <Button id="addToCartButton" icon="sap-icon://cart-4" press="onAddToCartPressed"
+            type="Transparent" />
+        </ColumnListItem>
+      </Table>
+    </Page>
+  </App>
+</mvc:View>
