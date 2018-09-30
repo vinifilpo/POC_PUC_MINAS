@@ -1,0 +1,80 @@
+class ZCL_ZBRR_RENTAB_CATEG_DPC_EXT definition
+  public
+  inheriting from ZCL_ZBRR_RENTAB_CATEG_DPC
+  create public .
+
+public section.
+protected section.
+
+  methods CATEGORIASET_GET_ENTITYSET
+    redefinition .
+private section.
+ENDCLASS.
+
+
+
+CLASS ZCL_ZBRR_RENTAB_CATEG_DPC_EXT IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBRR_RENTAB_CATEG_DPC_EXT->CATEGORIASET_GET_ENTITYSET
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_FILTER_SELECT_OPTIONS       TYPE        /IWBEP/T_MGW_SELECT_OPTION
+* | [--->] IS_PAGING                      TYPE        /IWBEP/S_MGW_PAGING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [--->] IT_ORDER                       TYPE        /IWBEP/T_MGW_SORTING_ORDER
+* | [--->] IV_FILTER_STRING               TYPE        STRING
+* | [--->] IV_SEARCH_STRING               TYPE        STRING
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITYSET(optional)
+* | [<---] ET_ENTITYSET                   TYPE        ZCL_ZBRR_RENTAB_CATEG_MPC=>TT_CATEGORIA
+* | [<---] ES_RESPONSE_CONTEXT            TYPE        /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_CONTEXT
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  method CATEGORIASET_GET_ENTITYSET.
+**TRY.
+*CALL METHOD SUPER->CATEGORIASET_GET_ENTITYSET
+*  EXPORTING
+*    IV_ENTITY_NAME           =
+*    IV_ENTITY_SET_NAME       =
+*    IV_SOURCE_NAME           =
+*    IT_FILTER_SELECT_OPTIONS =
+*    IS_PAGING                =
+*    IT_KEY_TAB               =
+*    IT_NAVIGATION_PATH       =
+*    IT_ORDER                 =
+*    IV_FILTER_STRING         =
+*    IV_SEARCH_STRING         =
+**    io_tech_request_context  =
+**  IMPORTING
+**    et_entityset             =
+**    es_response_context      =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+    DATA ti_zbr_vendas TYPE STANDARD TABLE OF zbr_vendas.
+
+    DATA ls_entityset LIKE LINE OF et_entityset.
+
+    FIELD-SYMBOLS <lfs_vendas> LIKE LINE OF ti_zbr_vendas.
+* Buscar informações de vendas realizadas
+    SELECT *
+      FROM zbr_vendas
+        INTO TABLE ti_zbr_vendas.
+
+    SORT ti_zbr_vendas BY produto.
+* Retornar para o front end o lucro por categoria
+    LOOP AT ti_zbr_vendas ASSIGNING <lfs_vendas>.
+      ls_entityset-categoria = <lfs_vendas>-categoria.
+      ls_entityset-lucro  = <lfs_vendas>-lucro.
+
+      COLLECT ls_entityset INTO et_entityset.
+      CLEAR ls_entityset.
+    ENDLOOP.
+  endmethod.
+ENDCLASS.

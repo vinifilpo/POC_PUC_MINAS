@@ -1,0 +1,180 @@
+CLASS zcl_zbr_fretes_dpc_ext DEFINITION
+  PUBLIC
+  INHERITING FROM zcl_zbr_fretes_dpc
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+
+    METHODS freteset_get_entity
+        REDEFINITION .
+    METHODS freteset_get_entityset
+        REDEFINITION .
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS ZCL_ZBR_FRETES_DPC_EXT IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBR_FRETES_DPC_EXT->FRETESET_GET_ENTITY
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IO_REQUEST_OBJECT              TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITY(optional)
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITY(optional)
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [<---] ER_ENTITY                      TYPE        ZCL_ZBR_FRETES_MPC=>TS_FRETE
+* | [<---] ES_RESPONSE_CONTEXT            TYPE        /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_ENTITY_CNTXT
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD freteset_get_entity.
+**TRY.
+*CALL METHOD SUPER->FRETESET_GET_ENTITY
+*  EXPORTING
+*    IV_ENTITY_NAME          =
+*    IV_ENTITY_SET_NAME      =
+*    IV_SOURCE_NAME          =
+*    IT_KEY_TAB              =
+**    io_request_object       =
+**    io_tech_request_context =
+*    IT_NAVIGATION_PATH      =
+**  IMPORTING
+**    er_entity               =
+**    es_response_context     =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+
+    DATA ti_zbr_frete TYPE STANDARD TABLE OF zbr_frete.
+
+    DATA: lc_cep    TYPE zbre_frete-cep,
+          lc_estado TYPE zbr_frete_regiao-estado,
+          lc_regiao TYPE zbr_regiao-regiao,
+          lc_peso   TYPE zbre_frete-peso.
+
+    FIELD-SYMBOLS: <lfs_key_tab> LIKE LINE OF it_key_tab,
+                   <lfs_frete>   LIKE LINE OF ti_zbr_frete.
+
+
+    LOOP AT it_key_tab ASSIGNING <lfs_key_tab>.
+      IF <lfs_key_tab>-name EQ 'cep'.
+        lc_cep = <lfs_key_tab>-value.
+      ELSEIF <lfs_key_tab>-name EQ 'peso'.
+        lc_peso = <lfs_key_tab>-value.
+      ENDIF.
+    ENDLOOP.
+
+    READ TABLE it_key_tab ASSIGNING <lfs_key_tab> INDEX 1.
+    IF sy-subrc EQ 0.
+      lc_cep = <lfs_key_tab>-value.
+    ENDIF.
+    READ TABLE it_key_tab ASSIGNING <lfs_key_tab> INDEX 2.
+    IF sy-subrc EQ 0.
+      lc_peso = <lfs_key_tab>-value.
+    ENDIF.
+* Buscar Região
+* Buscar região nas tabelas ADRSTRPCD e ADRCITY. Porém neste ambiente gratuito as tabelas não estão configuradas
+* e não é possivel realizar configuração. Os dados serão buscados na tabela abaixo para fins de teste
+    SELECT SINGLE estado rua cidade bairro
+      INTO (lc_estado,er_entity-rua,er_entity-cidade,er_entity-bairro)
+      FROM zbr_frete_regiao
+        WHERE cep EQ lc_cep.
+    IF sy-subrc NE 0.
+      lc_estado = 'RJ'.
+    ENDIF.
+    er_entity-estado = lc_estado.
+
+* buscar região
+    SELECT SINGLE regiao
+      FROM zbr_regiao
+        INTO lc_regiao
+          WHERE estado EQ lc_estado.
+
+
+    SELECT *
+      FROM zbr_frete
+        INTO TABLE ti_zbr_frete
+          WHERE regiao  EQ lc_regiao
+            AND ( peso_de LE lc_peso
+            AND peso_ate GE lc_peso ).
+    IF sy-subrc EQ 0.
+
+    ENDIF.
+
+    READ TABLE ti_zbr_frete ASSIGNING <lfs_frete> INDEX 1.
+    IF sy-subrc EQ 0.
+      er_entity-cep = lc_cep.
+      er_entity-peso = lc_peso.
+      er_entity-frete_rapida = <lfs_frete>-frete_rapida.
+      er_entity-frete_normal = <lfs_frete>-frete_normal.
+    ELSE.
+      er_entity-cep = '26510113'.
+      er_entity-peso = '0.050'.
+      er_entity-frete_rapida = '50.00'.
+      er_entity-frete_normal = '10.00'.
+    ENDIF.
+
+
+
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBR_FRETES_DPC_EXT->FRETESET_GET_ENTITYSET
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_FILTER_SELECT_OPTIONS       TYPE        /IWBEP/T_MGW_SELECT_OPTION
+* | [--->] IS_PAGING                      TYPE        /IWBEP/S_MGW_PAGING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [--->] IT_ORDER                       TYPE        /IWBEP/T_MGW_SORTING_ORDER
+* | [--->] IV_FILTER_STRING               TYPE        STRING
+* | [--->] IV_SEARCH_STRING               TYPE        STRING
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITYSET(optional)
+* | [<---] ET_ENTITYSET                   TYPE        ZCL_ZBR_FRETES_MPC=>TT_FRETE
+* | [<---] ES_RESPONSE_CONTEXT            TYPE        /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_CONTEXT
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD freteset_get_entityset.
+**TRY.
+*CALL METHOD SUPER->FRETESET_GET_ENTITYSET
+*  EXPORTING
+*    IV_ENTITY_NAME           =
+*    IV_ENTITY_SET_NAME       =
+*    IV_SOURCE_NAME           =
+*    IT_FILTER_SELECT_OPTIONS =
+*    IS_PAGING                =
+*    IT_KEY_TAB               =
+*    IT_NAVIGATION_PATH       =
+*    IT_ORDER                 =
+*    IV_FILTER_STRING         =
+*    IV_SEARCH_STRING         =
+**    io_tech_request_context  =
+**  IMPORTING
+**    et_entityset             =
+**    es_response_context      =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+    FIELD-SYMBOLS <lfs_entityset> LIKE LINE OF et_entityset.
+
+    APPEND INITIAL LINE TO et_entityset ASSIGNING <lfs_entityset>.
+
+    <lfs_entityset>-cep = '26510113'.
+    <lfs_entityset>-peso = '0.050'.
+    <lfs_entityset>-frete_rapida = '50.00'.
+    <lfs_entityset>-frete_normal = '10.00'.
+    BREAK-POINT.
+  ENDMETHOD.
+ENDCLASS.

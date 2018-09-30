@@ -1,0 +1,126 @@
+CLASS zcl_zbr_produtos_dpc_ext DEFINITION
+  PUBLIC
+  INHERITING FROM zcl_zbr_produtos_dpc
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+
+    METHODS produtosset_get_entityset
+        REDEFINITION .
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS ZCL_ZBR_PRODUTOS_DPC_EXT IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBR_PRODUTOS_DPC_EXT->PRODUTOSSET_GET_ENTITYSET
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_FILTER_SELECT_OPTIONS       TYPE        /IWBEP/T_MGW_SELECT_OPTION
+* | [--->] IS_PAGING                      TYPE        /IWBEP/S_MGW_PAGING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [--->] IT_ORDER                       TYPE        /IWBEP/T_MGW_SORTING_ORDER
+* | [--->] IV_FILTER_STRING               TYPE        STRING
+* | [--->] IV_SEARCH_STRING               TYPE        STRING
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITYSET(optional)
+* | [<---] ET_ENTITYSET                   TYPE        ZCL_ZBR_PRODUTOS_MPC=>TT_PRODUTOS
+* | [<---] ES_RESPONSE_CONTEXT            TYPE        /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_CONTEXT
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD produtosset_get_entityset.
+**TRY.
+*CALL METHOD SUPER->PRODUTOSSET_GET_ENTITYSET
+*  EXPORTING
+*    IV_ENTITY_NAME           =
+*    IV_ENTITY_SET_NAME       =
+*    IV_SOURCE_NAME           =
+*    IT_FILTER_SELECT_OPTIONS =
+*    IS_PAGING                =
+*    IT_KEY_TAB               =
+*    IT_NAVIGATION_PATH       =
+*    IT_ORDER                 =
+*    IV_FILTER_STRING         =
+*    IV_SEARCH_STRING         =
+**    io_tech_request_context  =
+**  IMPORTING
+**    et_entityset             =
+**    es_response_context      =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+    DATA: ti_zbr_produtos TYPE STANDARD TABLE OF zbr_produtos,
+          th_zbr_lucro    TYPE HASHED TABLE OF zbr_lucro WITH UNIQUE KEY categoria id_fornecedor.
+
+    DATA li_index TYPE sy-tabix.
+
+    FIELD-SYMBOLS: <lfs_entityset> LIKE LINE OF et_entityset,
+                   <lfs_produtos>  LIKE LINE OF ti_zbr_produtos,
+                   <lfs_zbr_lucro> LIKE LINE OF th_zbr_lucro.
+* Buscar produtos
+    SELECT *
+      FROM zbr_produtos
+        INTO TABLE ti_zbr_produtos
+          WHERE status EQ 'DISPONIVEL'.
+
+* Buscar Lucro
+      SELECT *
+        FROM zbr_lucro
+          INTO TABLE th_zbr_lucro.
+
+    IF sy-subrc EQ 0.
+      LOOP AT ti_zbr_produtos ASSIGNING <lfs_produtos>.
+
+        APPEND INITIAL LINE TO et_entityset ASSIGNING <lfs_entityset>.
+        MOVE-CORRESPONDING <lfs_produtos> TO <lfs_entityset>.
+
+
+        <lfs_entityset>-index = li_index.
+
+        CALL FUNCTION 'CONVERSION_EXIT_ALPHA_OUTPUT'
+          EXPORTING
+            input  = <lfs_entityset>-index
+          IMPORTING
+            output = <lfs_entityset>-index.
+
+          li_index = li_index + 1.
+
+
+* Determinar margem de lucro
+          READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = <lfs_produtos>-categoria
+                                                                       id_fornecedor = <lfs_produtos>-id_fornecedor.
+          IF sy-subrc NE 0.
+            READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = <lfs_produtos>-categoria
+                                                                         id_fornecedor = '*'.
+            IF sy-subrc NE 0.
+              READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = '*'
+                                                                           id_fornecedor = <lfs_produtos>-id_fornecedor.
+              IF sy-subrc NE 0.
+                READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = '*'
+                                                                             id_fornecedor = '*'.
+                IF sy-subrc NE 0.
+
+                ENDIF.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+
+         IF sy-subrc EQ 0.
+           <lfs_entityset>-preco = <lfs_produtos>-valor_fornecedor + ( <lfs_produtos>-valor_fornecedor * ( <lfs_zbr_lucro>-margem_lucro / 100 ) ).
+         ENDIF.
+
+      ENDLOOP.
+    ENDIF.
+
+
+
+  ENDMETHOD.
+ENDCLASS.

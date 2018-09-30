@@ -1,0 +1,347 @@
+CLASS zcl_zbr_compras_01_dpc_ext DEFINITION
+  PUBLIC
+  INHERITING FROM zcl_zbr_compras_01_dpc
+  CREATE PUBLIC .
+
+  PUBLIC SECTION.
+  PROTECTED SECTION.
+
+    METHODS comprasset_create_entity
+        REDEFINITION .
+    METHODS comprasset_get_entityset
+        REDEFINITION .
+    METHODS comprasset_get_entity
+        REDEFINITION .
+  PRIVATE SECTION.
+ENDCLASS.
+
+
+
+CLASS ZCL_ZBR_COMPRAS_01_DPC_EXT IMPLEMENTATION.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBR_COMPRAS_01_DPC_EXT->COMPRASSET_CREATE_ENTITY
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITY_C(optional)
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [--->] IO_DATA_PROVIDER               TYPE REF TO /IWBEP/IF_MGW_ENTRY_PROVIDER(optional)
+* | [<---] ER_ENTITY                      TYPE        ZCL_ZBR_COMPRAS_01_MPC=>TS_COMPRAS
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD comprasset_create_entity.
+    TYPES: BEGIN OF type_produtos_front,
+             id            TYPE zbr_produtos-id_produto,
+             quantidade(5) TYPE n,
+           END OF type_produtos_front,
+
+           BEGIN OF type_lines,
+             linhas TYPE zbre_compras-produtos,
+           END OF type_lines,
+
+           BEGIN OF type_zbr_produtos,
+             id_produto       TYPE zbr_produtos-id_produto,
+             produto          TYPE zbr_produtos-produto,
+             fabricante       TYPE zbr_produtos-fabricante,
+             categoria        TYPE zbr_produtos-categoria,
+             id_fornecedor    TYPE zbr_produtos-id_fornecedor,
+             fornecedor       TYPE zbr_produtos-fornecedor,
+             valor_fornecedor TYPE zbr_produtos-valor_fornecedor,
+           END OF type_zbr_produtos.
+
+    DATA: ti_lines          TYPE STANDARD TABLE OF type_lines,
+          ti_produtos_front TYPE STANDARD TABLE OF type_produtos_front,
+          ti_zbr_vendas     TYPE STANDARD TABLE OF zbr_vendas,
+          th_zbr_lucro      TYPE HASHED TABLE OF zbr_lucro WITH UNIQUE KEY categoria id_fornecedor,
+          th_zbr_produtos   TYPE HASHED TABLE OF   type_zbr_produtos WITH UNIQUE KEY id_produto,
+          ti_zbr_enderecos  TYPE STANDARD TABLE OF zbr_enderecos,
+          ti_zbr_pagamento  TYPE STANDARD TABLE OF zbr_pagamento.
+
+    FIELD-SYMBOLS: <lfs_lines>          LIKE LINE OF ti_lines,
+                   <lfs_produtos_front> LIKE LINE OF ti_produtos_front,
+                   <lfs_produtos>       LIKE LINE OF th_zbr_produtos,
+                   <lfs_zbr_lucro>      LIKE LINE OF th_zbr_lucro,
+                   <lfs_vendas>         LIKE LINE OF ti_zbr_vendas,
+                   <lfs_enderecos>      LIKE LINE OF ti_zbr_enderecos,
+                   <lfs_pagamento>      LIKE LINE OF ti_zbr_pagamento.
+
+    DATA: lc_regiao TYPE zbr_regiao-regiao,
+          li_number TYPE zbr_vendas-id_pedido.
+
+    CONSTANTS: cc_range  TYPE inri-nrrangenr VALUE '01',
+               cc_object TYPE inri-object    VALUE 'ZBR_PEDIDO'.
+
+
+**TRY.
+*CALL METHOD SUPER->COMPRASSET_CREATE_ENTITY
+*  EXPORTING
+*    IV_ENTITY_NAME          =
+*    IV_ENTITY_SET_NAME      =
+*    IV_SOURCE_NAME          =
+*    IT_KEY_TAB              =
+**    io_tech_request_context =
+*    IT_NAVIGATION_PATH      =
+**    io_data_provider        =
+**  IMPORTING
+**    er_entity               =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+    BREAK-POINT.
+* Recupera dados enviados pelo front end
+    io_data_provider->read_entry_data( IMPORTING es_data = er_entity ).
+
+* Gerar ID de pedido
+    CALL FUNCTION 'NUMBER_GET_NEXT'
+      EXPORTING
+        nr_range_nr             = cc_range
+        object                  = cc_object
+      IMPORTING
+        number                  = li_number
+      EXCEPTIONS
+        interval_not_found      = 1
+        number_range_not_intern = 2
+        object_not_found        = 3
+        quantity_is_0           = 4
+        quantity_is_not_1       = 5
+        interval_overflow       = 6
+        buffer_overflow         = 7
+        OTHERS                  = 8.
+    IF sy-subrc EQ 0.
+* Recupera produtos comprados
+      SPLIT er_entity-produtos AT ';' INTO TABLE ti_lines.
+      LOOP AT ti_lines ASSIGNING <lfs_lines>.
+        APPEND INITIAL LINE TO ti_produtos_front ASSIGNING <lfs_produtos_front>.
+        SPLIT <lfs_lines>-linhas AT '-' INTO <lfs_produtos_front>-id
+                                            <lfs_produtos_front>-quantidade.
+      ENDLOOP.
+
+      CHECK NOT ti_produtos_front IS INITIAL.
+* Buscar produtos
+      SELECT id_produto produto fabricante categoria
+             id_fornecedor fornecedor valor_fornecedor
+        FROM zbr_produtos
+          INTO TABLE th_zbr_produtos
+            FOR ALL ENTRIES IN ti_produtos_front
+              WHERE id_produto EQ ti_produtos_front-id.
+
+
+* Buscar Lucro
+      SELECT *
+        FROM zbr_lucro
+          INTO TABLE th_zbr_lucro.
+
+* buscar Região
+      SELECT SINGLE  regiao
+        FROM zbr_regiao
+          INTO lc_regiao
+            WHERE estado EQ er_entity-estado.
+
+      LOOP AT ti_produtos_front ASSIGNING <lfs_produtos_front>.
+
+
+        APPEND INITIAL LINE TO ti_zbr_vendas ASSIGNING <lfs_vendas>.
+
+        READ TABLE th_zbr_produtos ASSIGNING <lfs_produtos> WITH TABLE KEY id_produto = <lfs_produtos_front>-id.
+        IF sy-subrc EQ 0.
+
+
+          <lfs_vendas>-id_pedido   = li_number.
+          <lfs_vendas>-id_produto  = <lfs_produtos>-id_produto.
+          <lfs_vendas>-produto     = <lfs_produtos>-produto.
+          <lfs_vendas>-fabricante  = <lfs_produtos>-fabricante.
+          <lfs_vendas>-categoria   = <lfs_produtos>-categoria.
+          <lfs_vendas>-data_venda  = sy-datum.
+
+* Determinar margem de lucro
+          READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = <lfs_produtos>-categoria
+                                                                       id_fornecedor = <lfs_produtos>-id_fornecedor.
+          IF sy-subrc NE 0.
+            READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = <lfs_produtos>-categoria
+                                                                         id_fornecedor = '*'.
+            IF sy-subrc NE 0.
+              READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = '*'
+                                                                           id_fornecedor = <lfs_produtos>-id_fornecedor.
+              IF sy-subrc NE 0.
+                READ TABLE th_zbr_lucro ASSIGNING <lfs_zbr_lucro> WITH TABLE KEY categoria = '*'
+                                                                             id_fornecedor = '*'.
+                IF sy-subrc NE 0.
+
+                ENDIF.
+              ENDIF.
+            ENDIF.
+          ENDIF.
+          IF sy-subrc EQ 0.
+            <lfs_vendas>-margem_lucro = <lfs_zbr_lucro>-margem_lucro.
+          ENDIF.
+
+          <lfs_vendas>-valor = <lfs_produtos>-valor_fornecedor + ( <lfs_produtos>-valor_fornecedor * ( <lfs_zbr_lucro>-margem_lucro / 100 ) ).
+
+          <lfs_vendas>-lucro = <lfs_vendas>-valor - <lfs_produtos>-valor_fornecedor.
+
+          <lfs_vendas>-quantidade       = <lfs_produtos_front>-quantidade.
+          <lfs_vendas>-valor_unitario   = <lfs_vendas>-valor.
+          <lfs_vendas>-valor_unit_forn  = <lfs_produtos>-valor_fornecedor.
+
+          <lfs_vendas>-valor = <lfs_vendas>-valor_unitario * <lfs_vendas>-quantidade.
+          <lfs_vendas>-hora_venda  = sy-uzeit.
+          <lfs_vendas>-regiao        = lc_regiao.
+          <lfs_vendas>-id_fornecedor = <lfs_produtos>-id_fornecedor.
+          <lfs_vendas>-fornecedor    = <lfs_produtos>-fornecedor.
+
+          <lfs_vendas>-valor_pgto_forn = <lfs_produtos>-valor_fornecedor.
+
+        ENDIF.
+      ENDLOOP.
+    ELSE.
+* Erro ao gerar número de pedido
+    ENDIF.
+
+    CHECK NOT ti_zbr_vendas IS INITIAL.
+
+* Preencher pagamento
+    APPEND INITIAL LINE TO ti_zbr_pagamento ASSIGNING <lfs_pagamento>.
+    <lfs_pagamento>-id_pedido        = li_number.
+    <lfs_pagamento>-pagamento        = er_entity-pagamento.
+    <lfs_pagamento>-nomecartao       = er_entity-nomecartao.
+    <lfs_pagamento>-numerocartao     = er_entity-numerocartao.
+    <lfs_pagamento>-codigoseguranca  = er_entity-codigoseguranca.
+    <lfs_pagamento>-validadecartao   = er_entity-validadecartao.
+
+* Preencher endereço
+    APPEND INITIAL LINE TO ti_zbr_enderecos ASSIGNING <lfs_enderecos>.
+    <lfs_enderecos>-id_pedido    = li_number.
+    <lfs_enderecos>-endereco_fat = er_entity-endereco_fat.
+    <lfs_enderecos>-bairro_fat   = er_entity-bairro_fat.
+    <lfs_enderecos>-cidade       = er_entity-cidade.
+    <lfs_enderecos>-numero_fat   = er_entity-numero_fat.
+    <lfs_enderecos>-cep_fat      = er_entity-cep_fat.
+    <lfs_enderecos>-pais_fat     = er_entity-pais_fat.
+    <lfs_enderecos>-notas_fat    = er_entity-notas_fat.
+    <lfs_enderecos>-estado       = er_entity-estado.
+    <lfs_enderecos>-frete        = er_entity-frete.
+
+* Atualiza tabelas no banco de dados
+    MODIFY zbr_vendas FROM TABLE ti_zbr_vendas.
+
+    MODIFY zbr_pagamento FROM TABLE ti_zbr_pagamento.
+
+    MODIFY zbr_enderecos FROM TABLE ti_zbr_enderecos.
+
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBR_COMPRAS_01_DPC_EXT->COMPRASSET_GET_ENTITY
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IO_REQUEST_OBJECT              TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITY(optional)
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITY(optional)
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [<---] ER_ENTITY                      TYPE        ZCL_ZBR_COMPRAS_01_MPC=>TS_COMPRAS
+* | [<---] ES_RESPONSE_CONTEXT            TYPE        /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_ENTITY_CNTXT
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD comprasset_get_entity.
+**TRY.
+*CALL METHOD SUPER->COMPRASSET_GET_ENTITY
+*  EXPORTING
+*    IV_ENTITY_NAME          =
+*    IV_ENTITY_SET_NAME      =
+*    IV_SOURCE_NAME          =
+*    IT_KEY_TAB              =
+**    io_request_object       =
+**    io_tech_request_context =
+*    IT_NAVIGATION_PATH      =
+**  IMPORTING
+**    er_entity               =
+**    es_response_context     =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+* TESTE
+    er_entity-produtos        = '0001-2;0002-3'.
+    er_entity-pagamento       = 'Cartão de crédito'.
+    er_entity-nomecartao      = 'VINICUIS C S F'.
+    er_entity-numerocartao    = '6020524312455361'.
+    er_entity-codigoseguranca = '222'.
+    er_entity-validadecartao  = '20220101'.
+    er_entity-endereco_fat    = 'Rua João Pessoa'.
+    er_entity-numero_fat      = '514'.
+    er_entity-cep_fat         = '26510-113'.
+    er_entity-pais_fat        = 'BR'.
+    er_entity-notas_fat       = 'Próximo ao restaurante japonês'.
+  ENDMETHOD.
+
+
+* <SIGNATURE>---------------------------------------------------------------------------------------+
+* | Instance Protected Method ZCL_ZBR_COMPRAS_01_DPC_EXT->COMPRASSET_GET_ENTITYSET
+* +-------------------------------------------------------------------------------------------------+
+* | [--->] IV_ENTITY_NAME                 TYPE        STRING
+* | [--->] IV_ENTITY_SET_NAME             TYPE        STRING
+* | [--->] IV_SOURCE_NAME                 TYPE        STRING
+* | [--->] IT_FILTER_SELECT_OPTIONS       TYPE        /IWBEP/T_MGW_SELECT_OPTION
+* | [--->] IS_PAGING                      TYPE        /IWBEP/S_MGW_PAGING
+* | [--->] IT_KEY_TAB                     TYPE        /IWBEP/T_MGW_NAME_VALUE_PAIR
+* | [--->] IT_NAVIGATION_PATH             TYPE        /IWBEP/T_MGW_NAVIGATION_PATH
+* | [--->] IT_ORDER                       TYPE        /IWBEP/T_MGW_SORTING_ORDER
+* | [--->] IV_FILTER_STRING               TYPE        STRING
+* | [--->] IV_SEARCH_STRING               TYPE        STRING
+* | [--->] IO_TECH_REQUEST_CONTEXT        TYPE REF TO /IWBEP/IF_MGW_REQ_ENTITYSET(optional)
+* | [<---] ET_ENTITYSET                   TYPE        ZCL_ZBR_COMPRAS_01_MPC=>TT_COMPRAS
+* | [<---] ES_RESPONSE_CONTEXT            TYPE        /IWBEP/IF_MGW_APPL_SRV_RUNTIME=>TY_S_MGW_RESPONSE_CONTEXT
+* | [!CX!] /IWBEP/CX_MGW_BUSI_EXCEPTION
+* | [!CX!] /IWBEP/CX_MGW_TECH_EXCEPTION
+* +--------------------------------------------------------------------------------------</SIGNATURE>
+  METHOD comprasset_get_entityset.
+**TRY.
+*CALL METHOD SUPER->COMPRASSET_GET_ENTITYSET
+*  EXPORTING
+*    IV_ENTITY_NAME           =
+*    IV_ENTITY_SET_NAME       =
+*    IV_SOURCE_NAME           =
+*    IT_FILTER_SELECT_OPTIONS =
+*    IS_PAGING                =
+*    IT_KEY_TAB               =
+*    IT_NAVIGATION_PATH       =
+*    IT_ORDER                 =
+*    IV_FILTER_STRING         =
+*    IV_SEARCH_STRING         =
+**    io_tech_request_context  =
+**  IMPORTING
+**    et_entityset             =
+**    es_response_context      =
+*    .
+** CATCH /iwbep/cx_mgw_busi_exception .
+** CATCH /iwbep/cx_mgw_tech_exception .
+**ENDTRY.
+* TESTE
+    FIELD-SYMBOLS <lfs_entityset> LIKE LINE OF et_entityset.
+
+    APPEND INITIAL LINE TO et_entityset ASSIGNING <lfs_entityset>.
+
+    <lfs_entityset>-produtos        = '0001-2;0002-3'.
+    <lfs_entityset>-pagamento       = 'Cartão de crédito'.
+    <lfs_entityset>-nomecartao      = 'VINICUIS C S F SOAR'.
+    <lfs_entityset>-numerocartao    = '6020524312455361'.
+    <lfs_entityset>-codigoseguranca = '222'.
+    <lfs_entityset>-validadecartao  = '20220101'.
+    <lfs_entityset>-endereco_fat    = 'Rua João Pessoa'.
+    <lfs_entityset>-numero_fat      = '514'.
+    <lfs_entityset>-cep_fat         = '26510-113'.
+    <lfs_entityset>-pais_fat        = 'BR'.
+    <lfs_entityset>-notas_fat       = 'Próximo ao restaurante japonês'.
+
+  ENDMETHOD.
+ENDCLASS.
